@@ -1,0 +1,65 @@
+# Development Profile Configuration
+spring:
+  # Database - Local PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5433/contentdb
+    username: postgres
+    password: postgres
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  # JPA - Show SQL in dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Redis - Local
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # DevTools
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+# Debug logging for development
+logging:
+  level:
+    root: INFO
+    com.contentaggregation.content: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.cache: DEBUG
+    io.github.resilience4j: DEBUG
+
+# Actuator - Show all details in dev
+management:
+  endpoint:
+    health:
+      show-details: always
+
+# OpenAPI - Enable in dev
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Application - Development settings
+app:
+  auth-service:
+    url: http://localhost:8080
+    timeout-ms: 10000
+
+  cache:
+    content-ttl-minutes: 5
+    feed-ttl-minutes: 1
+    trending-ttl-minutes: 5

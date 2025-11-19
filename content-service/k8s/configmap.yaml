@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: content-service-config
+data:
+  SERVER_PORT: "8081"
+  SPRING_PROFILES_ACTIVE: "production"
+  CONTENT_DB_HOST: "content-postgres"
+  CONTENT_DB_PORT: "5432"
+  CONTENT_DB_NAME: "contentdb"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  AUTH_SERVICE_URL: "http://auth-service:8080"
+  AUTH_SERVICE_TIMEOUT_MS: "5000"
+  CONTENT_FEED_PAGE_SIZE: "20"
+  CONTENT_CACHE_TTL_MINUTES: "60"
+  FEED_CACHE_TTL_MINUTES: "5"
+  TRENDING_CACHE_TTL_MINUTES: "15"
+  DB_POOL_SIZE: "20"
+  JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"

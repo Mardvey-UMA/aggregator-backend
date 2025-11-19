@@ -1,0 +1,83 @@
+# Production Profile Configuration
+spring:
+  # Database - Production settings
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:30}
+      minimum-idle: 10
+      connection-timeout: 20000
+      validation-timeout: 5000
+
+  # JPA - Production optimizations
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        generate_statistics: false
+        jdbc:
+          batch_size: 50
+
+  # Redis - Production pool settings
+  data:
+    redis:
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
+
+  # Cache - Production TTL
+  cache:
+    redis:
+      time-to-live: 600000
+
+# Production logging
+logging:
+  level:
+    root: WARN
+    com.contentaggregation.content: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator - Restricted in production
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+# OpenAPI - Disable in production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Application - Production settings
+app:
+  auth-service:
+    timeout-ms: 3000
+
+  cache:
+    content-ttl-minutes: 60
+    feed-ttl-minutes: 5
+    trending-ttl-minutes: 15
+
+# Resilience4j - Stricter settings for production
+resilience4j:
+  circuitbreaker:
+    instances:
+      authService:
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+  timelimiter:
+    instances:
+      authService:
+        timeout-duration: 3s
