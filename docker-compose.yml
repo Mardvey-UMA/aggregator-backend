@@ -1,4 +1,49 @@
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.4
+    container_name: metrics-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.4
+    container_name: metrics-kafka
+    depends_on:
+      zookeeper:
+        condition: service_started
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
   # PostgreSQL Database for Auth Service
   postgres:
     image: postgres:15-alpine
@@ -62,6 +107,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+    restart: unless-stopped
+
+  metrics-postgres:
+    image: postgres:15-alpine
+    container_name: metrics-postgres
+    environment:
+      POSTGRES_USER: ${METRICS_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${METRICS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${METRICS_DB_NAME:-metricsdb}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${METRICS_DB_PORT:-5434}:5432"
+    volumes:
+      - metrics_postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${METRICS_DB_USERNAME:-postgres} -d ${METRICS_DB_NAME:-metricsdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # Auth Service
@@ -170,6 +237,62 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  metrics-service:
+    build:
+      context: .
+      dockerfile: metrics-service/Dockerfile
+    container_name: metrics-service
+    ports:
+      - "${METRICS_SERVER_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      METRICS_DB_HOST: metrics-postgres
+      METRICS_DB_PORT: 5432
+      METRICS_DB_NAME: ${METRICS_DB_NAME:-metricsdb}
+      METRICS_DB_USERNAME: ${METRICS_DB_USERNAME:-postgres}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:-postgres}
+      METRICS_DB_POOL_SIZE: ${METRICS_DB_POOL_SIZE:-30}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP: metrics-service-consumer
+      KAFKA_STREAMS_APP_ID: metrics-service-streams
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      CONTENT_SERVICE_URL: http://content-service:8081
+      CONTENT_SERVICE_TIMEOUT: 5s
+      CONTENT_SERVICE_CONNECT_TIMEOUT: 2s
+      CONTENT_SERVICE_MAX_CONNECTIONS: 200
+      CONTENT_SERVICE_MAX_IN_MEMORY_BYTES: 4194304
+      AUTH_SERVICE_URL: http://auth-service:8080
+      AUTH_SERVICE_TIMEOUT: 5s
+      AUTH_SERVICE_CONNECT_TIMEOUT: 2s
+      AUTH_SERVICE_MAX_CONNECTIONS: 200
+      AUTH_SERVICE_MAX_IN_MEMORY_BYTES: 2097152
+      DEDUP_TTL_SECONDS: 86400
+      EVENT_RATE_LIMIT: 1000
+      EVENT_RATE_WINDOW: 60s
+      EVENT_MAX_FUTURE_SKEW: 2m
+      EVENT_MAX_AGE: 7d
+      SERVER_PORT: 8082
+    depends_on:
+      metrics-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      content-service:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health/liveness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge
@@ -180,4 +303,8 @@ volumes:
   content_postgres_data:
     driver: local
   redis_data:
+    driver: local
+  metrics_postgres_data:
+    driver: local
+  kafka_data:
     driver: local

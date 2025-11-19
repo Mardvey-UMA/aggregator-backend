@@ -1,0 +1,17 @@
+app:
+  kafka:
+    streams:
+      state-dir: ${java.io.tmpdir}/kafka-streams-test
+      processing-guarantee: at_least_once
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+  flyway:
+    enabled: false
+  kafka:
+    streams:
+      properties:
+        auto.offset.reset: earliest
+

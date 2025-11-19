@@ -1,0 +1,107 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: metrics-service
+
+  datasource:
+    url: jdbc:postgresql://${METRICS_DB_HOST:localhost}:${METRICS_DB_PORT:5434}/${METRICS_DB_NAME:metricsdb}
+    username: ${METRICS_DB_USERNAME:postgres}
+    password: ${METRICS_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: ${METRICS_DB_POOL_SIZE:30}
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:metrics-service-consumer}
+      auto-offset-reset: earliest
+      properties:
+        isolation.level: read_committed
+    producer:
+      properties:
+        linger.ms: 5
+        acks: all
+    properties:
+      transaction.state.log.replication.factor: ${KAFKA_TX_REPLICATION:1}
+      transaction.state.log.min.isr: ${KAFKA_TX_MIN_ISR:1}
+    streams:
+      properties:
+        processing.guarantee: at_least_once
+        auto.offset.reset: earliest
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
+
+  threads:
+    virtual:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  kafka:
+    topics:
+      partitions: ${KAFKA_TOPIC_PARTITIONS:8}
+      replication-factor: ${KAFKA_TOPIC_REPLICATION:1}
+    streams:
+      application-id: ${KAFKA_STREAMS_APP_ID:metrics-service-streams}
+      processing-guarantee: ${KAFKA_STREAMS_GUARANTEE:exactly_once_v2}
+      state-dir: ${KAFKA_STREAMS_STATE_DIR:/tmp/kafka-streams}
+  deduplication:
+    ttl-seconds: ${DEDUP_TTL_SECONDS:86400}
+  content-service:
+    base-url: ${CONTENT_SERVICE_URL:http://localhost:8081}
+    timeout: ${CONTENT_SERVICE_TIMEOUT:5s}
+    connect-timeout: ${CONTENT_SERVICE_CONNECT_TIMEOUT:2s}
+    max-connections: ${CONTENT_SERVICE_MAX_CONNECTIONS:200}
+    max-in-memory-size: ${CONTENT_SERVICE_MAX_IN_MEMORY_BYTES:4194304}
+    circuit-breaker-window-size: ${CONTENT_SERVICE_CB_WINDOW:20}
+    circuit-breaker-id: contentService
+  auth-service:
+    base-url: ${AUTH_SERVICE_URL:http://localhost:8080}
+    timeout: ${AUTH_SERVICE_TIMEOUT:5s}
+    connect-timeout: ${AUTH_SERVICE_CONNECT_TIMEOUT:2s}
+    max-connections: ${AUTH_SERVICE_MAX_CONNECTIONS:200}
+    max-in-memory-size: ${AUTH_SERVICE_MAX_IN_MEMORY_BYTES:2097152}
+    circuit-breaker-window-size: ${AUTH_SERVICE_CB_WINDOW:20}
+    circuit-breaker-id: authService
+  events:
+    validation:
+      max-future-skew: ${EVENT_MAX_FUTURE_SKEW:2m}
+      max-age: ${EVENT_MAX_AGE:7d}
+    rate-limit:
+      limit: ${EVENT_RATE_LIMIT:1000}
+      window: ${EVENT_RATE_WINDOW:60s}
+
