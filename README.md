@@ -1,281 +1,166 @@
-# Content Aggregation Backend
+# Metrics & Profiles Service
 
-A microservices-based backend for content aggregation platform, built with Java 21 and Spring Boot 3.2+.
+The metrics-service ingests high-volume user interaction events, pushes them through Kafka, builds real-time preference profiles, and exposes them to downstream recommenders. It is built with Java 21, Spring Boot 3.2, Kafka 3.6, PostgreSQL 15, Redis 7, and Micrometer/Actuator for observability.
 
-## Project Structure
+## Architecture
 
 ```
-content-aggregation-backend/
-├── common/                    # Shared DTOs, exceptions, utilities
-├── auth-service/             # Authentication & authorization service
-├── docker-compose.yml        # Local development stack
-├── settings.gradle.kts       # Multi-module configuration
-└── build.gradle.kts          # Root build configuration
+Frontend SDK ─┐
+              │  (REST + JWT)
+              ▼
+        Event Ingestion API ──► Validation & Dedup (Redis)
+                                   │
+                                   ▼
+                          Kafka (3 topics + DLT)
+                                   │
+                        Batched Kafka Consumers
+                                   │
+                                   ▼
+                     Profile Builder + PostgreSQL (Flyway)
+                                   │
+             ┌─────────────────────┴──────────────────────┐
+             ▼                                            ▼
+    Profile Retrieval API                        Admin / Replay API
 ```
 
-## Technology Stack
+Key components live in `metrics-service/`:
 
-- **Java**: 21 (with Virtual Threads enabled)
-- **Spring Boot**: 3.2.5
-- **Spring Security**: 6.x with OAuth2
-- **Database**: PostgreSQL 15
-- **Cache**: Redis 7
-- **Migration**: Flyway
-- **Build**: Gradle (Kotlin DSL)
-- **Container**: Docker
+- `controller/EventsController` – REST ingestion endpoint.
+- `service/ingestion/*` – validation, deduplication, rate limiting.
+- `kafka/consumer/ProfileEventsListener` – batched Kafka listener with manual commits.
+- `service/profile/*` – profile builder plus user-facing services.
+- `dto/response/UserProfileDto` – contract consumed by recommenders.
 
-## Prerequisites
+## Getting Started
 
-- Java 21 (JDK)
-- Gradle 8.7+
-- Docker & Docker Compose
-- PostgreSQL 15 (or use Docker)
-- Redis 7 (or use Docker)
+### Prerequisites
 
-## Quick Start
+- Java 21
+- Docker / Docker Compose
+- `make` or shell access
 
-### 1. Clone and Setup
+### Local Environment
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd content-aggregation-backend
+# Start dependencies (Postgres, Redis, Kafka/ZooKeeper)
+docker compose up -d postgres redis kafka zookeeper
 
-# Copy environment template
-cp .env.example .env
+# Run the metrics service
+./gradlew :metrics-service:bootRun
 
-# Edit .env with your configuration
-nano .env
+# Tail logs
+docker compose logs -f kafka redis
 ```
 
-### 2. Run with Docker Compose (Recommended)
+### Configuration
 
-```bash
-# Start all services
-docker-compose up -d
+All relevant settings live in `metrics-service/src/main/resources/application.yml`. Highlights:
 
-# View logs
-docker-compose logs -f auth-service
+| Property | Purpose | Default |
+|----------|---------|---------|
+| `spring.kafka.consumer.group-id` | Dedicated profile consumer group | `metrics-profile-consumer` |
+| `spring.kafka.consumer.properties.max.poll.records` | Batch size | `500` |
+| `spring.kafka.producer.properties.compression.type` | Network compression | `zstd` |
+| `app.kafka.topics.retention` | Topic retention window | `P7D` |
+| `app.health.profile-processing.max-lag-ms` | SLA threshold for lag health | `1000` |
 
-# Stop services
-docker-compose down
-```
+For a deep dive into event contracts, profile math, and integration points see:
 
-### 3. Run Locally (Development)
+- `docs/EVENT_SCHEMA.md`
+- `docs/PROFILE_ALGORITHM.md`
+- `docs/INTEGRATION.md`
 
-```bash
-# Start PostgreSQL and Redis
-docker-compose up -d postgres redis
+## APIs
 
-# Build the project
-./gradlew build
-
-# Run auth-service
-./gradlew :auth-service:bootRun
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DB_HOST` | PostgreSQL host | localhost |
-| `DB_PORT` | PostgreSQL port | 5432 |
-| `DB_NAME` | Database name | authdb |
-| `DB_USERNAME` | Database username | postgres |
-| `DB_PASSWORD` | Database password | postgres |
-| `REDIS_HOST` | Redis host | localhost |
-| `REDIS_PORT` | Redis port | 6379 |
-| `JWT_SECRET` | JWT signing secret (256+ bits) | - |
-| `JWT_ACCESS_TOKEN_EXPIRATION` | Access token TTL (ms) | 900000 |
-| `JWT_REFRESH_TOKEN_EXPIRATION` | Refresh token TTL (ms) | 604800000 |
-| `VK_CLIENT_ID` | VK OAuth2 client ID | - |
-| `VK_CLIENT_SECRET` | VK OAuth2 client secret | - |
-
-### Spring Profiles
-
-- `dev` - Development (default)
-- `prod` - Production
-
-## API Documentation
-
-Once the service is running, access:
-
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI Spec**: http://localhost:8080/v3/api-docs
-
-## API Endpoints
-
-### Public Endpoints
+### Event Ingestion
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/auth/register` | User registration |
-| POST | `/api/v1/auth/login` | User login |
-| POST | `/api/v1/auth/refresh` | Refresh access token |
-| GET | `/api/v1/auth/oauth2/vk/authorize` | VK OAuth2 authorization |
-| GET | `/api/v1/auth/oauth2/vk/callback` | VK OAuth2 callback |
+| `POST` | `/api/v1/events` | Accepts a batch of heterogeneous events (see EVENT_SCHEMA.md) |
 
-### Protected Endpoints (Require JWT)
+### Profile Retrieval & Preferences
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/auth/logout` | User logout |
-| GET | `/api/v1/auth/me` | Get current user |
-| PUT | `/api/v1/auth/me` | Update current user |
-| DELETE | `/api/v1/auth/me` | Delete account |
+| `GET` | `/api/v1/profiles/{userId}` | Retrieve full user profile |
+| `GET` | `/api/v1/profiles/{userId}/preferences` | Snapshot of preferences (auto-creates profile) |
+| `PUT` | `/api/v1/profiles/{userId}/preferences` | Manual override for category weights (owner/Admin) |
+| `DELETE` | `/api/v1/profiles/{userId}` | Remove a profile (owner/Admin) |
 
-### Health & Monitoring
+### Admin Operations
 
-| Endpoint | Description |
-|----------|-------------|
-| `/actuator/health` | Overall health |
-| `/actuator/health/liveness` | Kubernetes liveness |
-| `/actuator/health/readiness` | Kubernetes readiness |
-| `/actuator/info` | Build information |
-| `/actuator/metrics` | Application metrics |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/admin/profiles/recalculate` | Rebuild every profile from historical events |
+| `GET` | `/api/v1/admin/profiles/export?format=csv\|json` | Export profiles for ML |
+| `POST` | `/api/v1/admin/profiles/events/replay?userId=...` | Replay a single user’s events |
 
-## Development
-
-### Build Commands
-
-```bash
-# Clean and build all modules
-./gradlew clean build
-
-# Build without tests
-./gradlew build -x test
-
-# Run tests
-./gradlew test
-
-# Run specific module tests
-./gradlew :auth-service:test
-
-# Check dependencies
-./gradlew dependencies
-```
-
-### Code Quality
-
-```bash
-# Run checkstyle (if configured)
-./gradlew checkstyleMain
-
-# Generate test coverage report
-./gradlew jacocoTestReport
-```
-
-## Docker
-
-### Build Image
-
-```bash
-# Build auth-service image
-docker build -t auth-service -f auth-service/Dockerfile .
-```
-
-### Run Containers
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Start specific service
-docker-compose up -d auth-service
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes
-docker-compose down -v
-```
-
-## Database
-
-### Migrations
-
-Flyway migrations are located in:
-```
-auth-service/src/main/resources/db/migration/
-```
-
-Naming convention: `V{version}__{description}.sql`
-
-### Connect to Database
-
-```bash
-# Via Docker
-docker exec -it auth-postgres psql -U postgres -d authdb
-
-# Via local psql
-psql -h localhost -U postgres -d authdb
-```
+Swagger UI is available at `http://localhost:8082/swagger-ui.html`.
 
 ## Testing
 
-### Unit Tests
+Integration coverage relies on Testcontainers (Kafka, PostgreSQL, Redis). Two suites validate the full pipeline:
+
+- `EventIngestionIntegrationTest` – validates request → Kafka publication, deduplication, and validation errors.
+- `ProfileBuilderIntegrationTest` – verifies Kafka-driven profile updates, category weighting, and entity counting with mocked `ContentServiceClient`.
+
+Run all tests:
 
 ```bash
-./gradlew test
+./gradlew :metrics-service:test
 ```
 
-### Integration Tests
+## Performance & Reliability
 
-Integration tests use Testcontainers:
+- **Kafka Consumer Tuning**: batched listeners (`max.poll.records=500`), manual acknowledgements, configurable concurrency, and record-level parallelism per partition.
+- **Producer Optimizations**: linger/batch size bumped plus `zstd` compression to reduce I/O.
+- **Database Optimizations**: Hibernate batching (`batch_size=50`, ordered inserts/updates) and Flyway indexes (`V4__profile_indexes.sql`) keep profile writes under 5s P95.
+- **Redis-Based Deduplication**: event and batch TTL = 24h.
+
+## Observability
+
+### Metrics
+
+Metric | Description | Tags
+------ | ----------- | ----
+`events.ingested.total` | Accepted events by type (ingestion) | `type`
+`events.processed.total` | Kafka events processed | `type`
+`events.processing.lag` | Latest lag (Kafka → DB) gauge (ms) | —
+`profiles.created.total` | Count of persisted profiles | —
+`profiles.updated.total` | Count of profile updates | —
+`category.preference.distribution` | Histogram of preference scores | `category`
+
+Expose metrics via `/actuator/metrics`.
+
+### Health Indicators
+
+Health Check | Description
+----------- | -----------
+`kafka` | Checks cluster id & broker count via AdminClient
+`contentService` | Pings content-service `/actuator/health`
+`profileProcessing` | Reports DOWN when lag exceeds `app.health.profile-processing.max-lag-ms`
+
+All available at `/actuator/health`.
+
+## Integration Overview
+
+- Frontend integration details: `docs/INTEGRATION.md`
+- Event schema reference: `docs/EVENT_SCHEMA.md`
+- Profile math (EMA weights, entity counters, behavioral signals): `docs/PROFILE_ALGORITHM.md`
+
+## Useful Commands
 
 ```bash
-./gradlew integrationTest
+# Format + build metrics-service only
+./gradlew :metrics-service:clean :metrics-service:build
+
+# Run metrics-service with dev profile
+SPRING_PROFILES_ACTIVE=dev ./gradlew :metrics-service:bootRun
+
+# Tail profile metrics
+curl -s http://localhost:8082/actuator/metrics | jq
 ```
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue**: JWT tokens not validating
-- Check JWT_SECRET environment variable
-- Verify token expiration times
-- Check clock synchronization
-
-**Issue**: Database connection fails
-- Check PostgreSQL is running: `docker ps`
-- Verify DB credentials in .env
-- Check database exists
-
-**Issue**: Redis connection fails
-- Check Redis is running: `docker ps`
-- Verify Redis host and port
-
-### Logs
-
-```bash
-# Docker logs
-docker-compose logs auth-service
-
-# Application logs (local)
-tail -f auth-service/logs/application.log
-```
-
-## Security
-
-- JWT tokens for stateless authentication
-- BCrypt (cost 12) for password hashing
-- OAuth2 for VK social login
-- HTTPS required in production
-- Input validation on all endpoints
 
 ## License
 
-MIT License
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
+MIT License.

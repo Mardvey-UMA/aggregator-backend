@@ -8,6 +8,8 @@ import com.contentaggregation.metrics.dto.event.PostViewEvent;
 import com.contentaggregation.metrics.dto.event.UserEventPayload;
 import com.contentaggregation.metrics.entity.UserProfile;
 import com.contentaggregation.metrics.repository.UserProfileRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +28,24 @@ public class ProfileBuilderService {
 
     private final UserProfileRepository userProfileRepository;
     private final ContentServiceClient contentServiceClient;
+    private final MeterRegistry meterRegistry;
+    private final Counter profilesCreatedCounter;
+    private final Counter profilesUpdatedCounter;
 
     public ProfileBuilderService(
         UserProfileRepository userProfileRepository,
-        ContentServiceClient contentServiceClient
+        ContentServiceClient contentServiceClient,
+        MeterRegistry meterRegistry
     ) {
         this.userProfileRepository = userProfileRepository;
         this.contentServiceClient = contentServiceClient;
+        this.meterRegistry = meterRegistry;
+        this.profilesCreatedCounter = Counter.builder("profiles.created.total")
+            .description("Total number of user profiles created")
+            .register(meterRegistry);
+        this.profilesUpdatedCounter = Counter.builder("profiles.updated.total")
+            .description("Total number of user profiles updated")
+            .register(meterRegistry);
     }
 
     @Transactional
@@ -41,8 +54,7 @@ public class ProfileBuilderService {
             return;
         }
         UUID userId = event.base().userId();
-        UserProfile profile = userProfileRepository.findByUserId(userId)
-            .orElseGet(() -> createProfile(userId));
+        UserProfile profile = loadOrCreateProfile(userId);
 
         if (event instanceof PostViewEvent viewEvent) {
             handlePostView(profile, viewEvent);
@@ -56,6 +68,16 @@ public class ProfileBuilderService {
 
         profile.setLastUpdated(LocalDateTime.now(ZoneOffset.UTC));
         userProfileRepository.save(profile);
+        profilesUpdatedCounter.increment();
+    }
+
+    private UserProfile loadOrCreateProfile(UUID userId) {
+        return userProfileRepository.findByUserId(userId)
+            .orElseGet(() -> {
+                UserProfile profile = createProfile(userId);
+                profilesCreatedCounter.increment();
+                return profile;
+            });
     }
 
     private UserProfile createProfile(UUID userId) {
@@ -125,7 +147,13 @@ public class ProfileBuilderService {
         if (categories == null || categories.isEmpty()) {
             return;
         }
-        categories.forEach((category, score) -> profile.updateCategoryPreference(category, score, alpha));
+        categories.forEach((category, score) -> {
+            profile.updateCategoryPreference(category, score, alpha);
+            if (category != null && score != null) {
+                meterRegistry.summary("category.preference.distribution", "category", category)
+                    .record(Math.min(1.0d, Math.max(0.0d, score)));
+            }
+        });
     }
 
     private void updateEntityPreferences(UserProfile profile, Map<String, java.util.List<String>> entities) {

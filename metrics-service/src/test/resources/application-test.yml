@@ -11,6 +11,8 @@ spring:
   flyway:
     enabled: false
   kafka:
+    consumer:
+      group-id: metrics-test-consumer
     streams:
       properties:
         auto.offset.reset: earliest

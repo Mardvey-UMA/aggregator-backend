@@ -16,6 +16,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     Optional<UserProfile> findByUserId(UUID userId);
 
+    void deleteByUserId(UUID userId);
+
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

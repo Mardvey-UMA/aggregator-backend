@@ -5,6 +5,9 @@ spring:
   application:
     name: metrics-service
 
+  cache:
+    type: redis
+
   datasource:
     url: jdbc:postgresql://${METRICS_DB_HOST:localhost}:${METRICS_DB_PORT:5434}/${METRICS_DB_NAME:metricsdb}
     username: ${METRICS_DB_USERNAME:postgres}
@@ -25,6 +28,9 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true
@@ -33,14 +39,21 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: ${KAFKA_CONSUMER_GROUP:metrics-service-consumer}
+      group-id: ${KAFKA_CONSUMER_GROUP:metrics-profile-consumer}
       auto-offset-reset: earliest
       properties:
         isolation.level: read_committed
+        max.poll.records: ${KAFKA_MAX_POLL_RECORDS:500}
+        fetch.min.bytes: ${KAFKA_FETCH_MIN_BYTES:524288}
+        fetch.max.wait.ms: ${KAFKA_FETCH_MAX_WAIT_MS:250}
+        max.partition.fetch.bytes: ${KAFKA_MAX_PARTITION_FETCH_BYTES:4194304}
+        enable.auto.commit: false
     producer:
       properties:
-        linger.ms: 5
+        linger.ms: 10
         acks: all
+        batch.size: 32768
+        compression.type: zstd
     properties:
       transaction.state.log.replication.factor: ${KAFKA_TX_REPLICATION:1}
       transaction.state.log.min.isr: ${KAFKA_TX_MIN_ISR:1}
@@ -75,10 +88,17 @@ app:
     topics:
       partitions: ${KAFKA_TOPIC_PARTITIONS:8}
       replication-factor: ${KAFKA_TOPIC_REPLICATION:1}
+      retention: ${KAFKA_TOPIC_RETENTION:P7D}
+      compression: ${KAFKA_TOPIC_COMPRESSION:zstd}
     streams:
       application-id: ${KAFKA_STREAMS_APP_ID:metrics-service-streams}
       processing-guarantee: ${KAFKA_STREAMS_GUARANTEE:exactly_once_v2}
       state-dir: ${KAFKA_STREAMS_STATE_DIR:/tmp/kafka-streams}
+    listeners:
+      profile:
+        concurrency: ${KAFKA_PROFILE_LISTENER_CONCURRENCY:3}
+        poll-timeout: ${KAFKA_PROFILE_LISTENER_POLL_TIMEOUT:2s}
+        idle-between-polls: ${KAFKA_PROFILE_LISTENER_IDLE:25ms}
   deduplication:
     ttl-seconds: ${DEDUP_TTL_SECONDS:86400}
   content-service:
@@ -104,4 +124,7 @@ app:
     rate-limit:
       limit: ${EVENT_RATE_LIMIT:1000}
       window: ${EVENT_RATE_WINDOW:60s}
+  health:
+    profile-processing:
+      max-lag-ms: ${PROFILE_PROCESSING_MAX_LAG_MS:1000}
 

@@ -8,12 +8,11 @@ import com.contentaggregation.metrics.dto.event.PostViewEvent;
 import com.contentaggregation.metrics.dto.event.UserEventPayload;
 import com.contentaggregation.metrics.entity.UserProfile;
 import com.contentaggregation.metrics.repository.UserProfileRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -36,11 +35,8 @@ class ProfileBuilderServiceTest {
     @Mock
     private ContentServiceClient contentServiceClient;
 
-    @InjectMocks
     private ProfileBuilderService profileBuilderService;
-
-    @Captor
-    private ArgumentCaptor<UserProfile> profileCaptor;
+    private MeterRegistry meterRegistry;
 
     private UUID userId;
     private UserProfile existingProfile;
@@ -57,6 +53,9 @@ class ProfileBuilderServiceTest {
             .build();
 
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        meterRegistry = new SimpleMeterRegistry();
+        profileBuilderService = new ProfileBuilderService(userProfileRepository, contentServiceClient, meterRegistry);
     }
 
     @Test

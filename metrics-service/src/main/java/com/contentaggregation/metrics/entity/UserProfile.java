@@ -131,6 +131,22 @@ public class UserProfile {
         return Map.copyOf(categoryPreferences);
     }
 
+    public void setCategoryPreferencesFromMap(Map<String, Double> categories) {
+        if (categories == null || categories.isEmpty()) {
+            this.categoryPreferences = new HashMap<>();
+            return;
+        }
+        Map<String, Double> sanitized = new HashMap<>();
+        categories.forEach((category, score) -> {
+            if (category == null || category.isBlank() || score == null) {
+                return;
+            }
+            double clamped = Math.max(0.0d, Math.min(1.0d, score));
+            sanitized.put(category, clamped);
+        });
+        this.categoryPreferences = sanitized;
+    }
+
     public Map<String, Object> getEntityPreferencesMap() {
         Map<String, Object> copy = new HashMap<>();
         entityPreferences.forEach(copy::put);

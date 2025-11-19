@@ -24,16 +24,21 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.time.Duration;
 
 @Configuration
 @EnableKafka
-@EnableConfigurationProperties(KafkaConfig.KafkaTopicProperties.class)
+@EnableConfigurationProperties({
+    KafkaConfig.KafkaTopicProperties.class,
+    KafkaConfig.ProfileListenerProperties.class
+})
 public class KafkaConfig {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
@@ -100,18 +105,6 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-        ConsumerFactory<String, String> consumerFactory,
-        DefaultErrorHandler errorHandler
-    ) {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setObservationEnabled(true);
-        return factory;
-    }
-
-    @Bean
     public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, new FixedBackOff(1_000L, 3));
@@ -122,10 +115,32 @@ public class KafkaConfig {
         return errorHandler;
     }
 
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> profileEventsListenerContainerFactory(
+        ConsumerFactory<String, String> consumerFactory,
+        DefaultErrorHandler errorHandler,
+        ProfileListenerProperties properties
+    ) {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setBatchListener(true);
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(errorHandler);
+        factory.setConcurrency(properties.concurrency());
+        ContainerProperties containerProperties = factory.getContainerProperties();
+        containerProperties.setAckMode(ContainerProperties.AckMode.MANUAL);
+        containerProperties.setObservationEnabled(true);
+        containerProperties.setIdleBetweenPolls(properties.idleBetweenPolls().toMillis());
+        containerProperties.setPollTimeout(properties.pollTimeout().toMillis());
+        return factory;
+    }
+
     private NewTopic buildTopic(String name, KafkaTopicProperties properties) {
         return TopicBuilder.name(name)
             .partitions(properties.partitions())
             .replicas(properties.replicationFactor())
+            .config("retention.ms", String.valueOf(properties.retention().toMillis()))
+            .config("cleanup.policy", "delete")
+            .config("compression.type", properties.compression())
             .build();
     }
 
@@ -133,11 +148,15 @@ public class KafkaConfig {
     public static class KafkaTopicProperties {
         private final int partitions;
         private final short replicationFactor;
+        private final Duration retention;
+        private final String compression;
 
         @ConstructorBinding
         public KafkaTopicProperties(
             @Name("partitions") @DefaultValue("8") Integer partitions,
-            @Name("replication-factor") @DefaultValue("1") Short replicationFactor
+            @Name("replication-factor") @DefaultValue("1") Short replicationFactor,
+            @Name("retention") @DefaultValue("P7D") Duration retention,
+            @Name("compression") @DefaultValue("zstd") String compression
         ) {
             if (partitions == null || partitions < 1) {
                 throw new InvalidConfigurationPropertyValueException("app.kafka.topics.partitions",
@@ -149,6 +168,8 @@ public class KafkaConfig {
             }
             this.partitions = partitions;
             this.replicationFactor = replicationFactor;
+            this.retention = retention != null ? retention : Duration.ofDays(7);
+            this.compression = compression != null ? compression : "zstd";
         }
 
         public int partitions() {
@@ -157,6 +178,45 @@ public class KafkaConfig {
 
         public short replicationFactor() {
             return replicationFactor;
+        }
+
+        public Duration retention() {
+            return retention;
+        }
+
+        public String compression() {
+            return compression;
+        }
+    }
+
+    @ConfigurationProperties(prefix = "app.kafka.listeners.profile")
+    public static class ProfileListenerProperties {
+        private int concurrency = 3;
+        private Duration pollTimeout = Duration.ofSeconds(2);
+        private Duration idleBetweenPolls = Duration.ofMillis(25);
+
+        public int concurrency() {
+            return concurrency;
+        }
+
+        public void setConcurrency(int concurrency) {
+            this.concurrency = concurrency;
+        }
+
+        public Duration pollTimeout() {
+            return pollTimeout;
+        }
+
+        public void setPollTimeout(Duration pollTimeout) {
+            this.pollTimeout = pollTimeout;
+        }
+
+        public Duration idleBetweenPolls() {
+            return idleBetweenPolls;
+        }
+
+        public void setIdleBetweenPolls(Duration idleBetweenPolls) {
+            this.idleBetweenPolls = idleBetweenPolls;
         }
     }
 }
