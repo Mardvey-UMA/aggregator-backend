@@ -1,5 +1,6 @@
 package com.contentaggregation.auth.entity;
 
+import com.contentaggregation.auth.onboarding.entity.OnboardingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -71,6 +72,9 @@ public class User {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private OnboardingStatus onboardingStatus;
 
     /**
      * Updates the last login timestamp to current time.
@@ -144,5 +148,14 @@ public class User {
      */
     public boolean hasPassword() {
         return passwordHash != null && !passwordHash.isEmpty();
+    }
+
+    /**
+     * Indicates if the user has finished onboarding.
+     *
+     * @return true when onboarding status exists and is completed
+     */
+    public boolean hasCompletedOnboarding() {
+        return onboardingStatus != null && Boolean.TRUE.equals(onboardingStatus.getCompleted());
     }
 }

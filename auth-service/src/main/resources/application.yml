@@ -111,6 +111,18 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}  # 7 days in ms
   issuer: content-aggregation-auth
 
+# Metrics Service Integration
+metrics:
+  service:
+    url: ${METRICS_SERVICE_URL:http://localhost:8082}
+    timeout-ms: ${METRICS_SERVICE_TIMEOUT_MS:5000}
+
+# Onboarding Configuration
+onboarding:
+  min-categories: ${ONBOARDING_MIN_CATEGORIES:3}
+  max-categories: ${ONBOARDING_MAX_CATEGORIES:5}
+  version: ${ONBOARDING_VERSION:v1}
+
 # Application Configuration
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}

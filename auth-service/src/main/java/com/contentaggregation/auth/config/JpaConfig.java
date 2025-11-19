@@ -24,7 +24,10 @@ import java.util.Optional;
  */
 @Configuration
 @EnableJpaAuditing(dateTimeProviderRef = "utcDateTimeProvider")
-@EnableJpaRepositories(basePackages = "com.contentaggregation.auth.repository")
+@EnableJpaRepositories(basePackages = {
+        "com.contentaggregation.auth.repository",
+        "com.contentaggregation.auth.onboarding.repository"
+})
 @EnableTransactionManagement
 public class JpaConfig {
 

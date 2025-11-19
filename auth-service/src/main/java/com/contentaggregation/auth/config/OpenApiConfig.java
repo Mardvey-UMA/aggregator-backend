@@ -44,10 +44,14 @@ public class OpenApiConfig {
                                 - OAuth2 authentication (VK)
                                 - Token refresh
                                 - User profile management
+                                - Onboarding preference capture
 
                                 ## Authentication
                                 Protected endpoints require a JWT token in the Authorization header:
                                 `Authorization: Bearer <token>`
+                                
+                                ## Onboarding API
+                                Use the `/api/v1/onboarding/*` endpoints to collect initial user interests.
                                 """)
                         .contact(new Contact()
                                 .name("Content Aggregation Team")

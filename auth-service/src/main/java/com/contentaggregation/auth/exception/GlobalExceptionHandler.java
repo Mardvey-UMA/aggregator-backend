@@ -1,6 +1,8 @@
 package com.contentaggregation.auth.exception;
 
 import com.contentaggregation.auth.dto.response.ErrorResponse;
+import com.contentaggregation.auth.onboarding.exception.InvalidPreferenceException;
+import com.contentaggregation.auth.onboarding.exception.OnboardingNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -147,6 +149,44 @@ public class GlobalExceptionHandler {
 
         log.warn("User not found: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handles onboarding status not found errors.
+     */
+    @ExceptionHandler(OnboardingNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOnboardingNotFound(
+            OnboardingNotFoundException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        log.warn("Onboarding not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handles invalid onboarding preferences.
+     */
+    @ExceptionHandler(InvalidPreferenceException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPreference(
+            InvalidPreferenceException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        log.warn("Invalid onboarding preference: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     /**

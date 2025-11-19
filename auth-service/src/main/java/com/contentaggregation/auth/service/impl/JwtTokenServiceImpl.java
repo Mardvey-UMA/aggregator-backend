@@ -65,6 +65,7 @@ public class JwtTokenServiceImpl implements JwtTokenService {
         Map<String, Object> claims = new HashMap<>();
         claims.put(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE);
         claims.put(USER_ID_CLAIM, user.getId().toString());
+        claims.put("jti", UUID.randomUUID().toString());
 
         return buildToken(claims, user.getEmail(), refreshTokenExpiration);
     }

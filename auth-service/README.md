@@ -7,6 +7,7 @@ A production-ready authentication microservice built with Java 21 and Spring Boo
 - User registration with email/password
 - JWT access and refresh token authentication
 - OAuth2 authentication (VK)
+- Guided onboarding that seeds user profile preferences
 - Password validation with security requirements
 - Rate limiting with Redis
 - Health checks (liveness/readiness)
@@ -99,6 +100,20 @@ A production-ready authentication microservice built with Java 21 and Spring Boo
 | DELETE | `/api/v1/users/me` | Delete current user |
 
 For detailed API documentation, see [API.md](API.md).
+
+### Onboarding
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/onboarding/status` | Current onboarding status |
+| GET | `/api/v1/onboarding/categories` | Available interest categories |
+| POST | `/api/v1/onboarding/categories` | Save category selections |
+| POST | `/api/v1/onboarding/content-types` | Save content type preferences |
+| POST | `/api/v1/onboarding/complete` | Complete onboarding with selections |
+| POST | `/api/v1/onboarding/skip` | Skip onboarding and apply defaults |
+| PUT | `/api/v1/onboarding/reset` | Reset onboarding progress |
+
+See [ONBOARDING_INTEGRATION.md](ONBOARDING_INTEGRATION.md) for frontend flow details.
 
 ## Project Structure
 
