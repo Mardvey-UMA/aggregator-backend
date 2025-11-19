@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  # Database Configuration (Development)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/authdb
+    username: postgres
+    password: postgres
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  # JPA Development Settings
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Redis Development
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+
+  # Development OAuth2
+  security:
+    oauth2:
+      client:
+        registration:
+          vk:
+            redirect-uri: http://localhost:8080/api/v1/auth/oauth2/callback/vk
+
+# JWT Development Configuration
+jwt:
+  # Base64 encoded: "dev-super-secret-jwt-key-for-local-development-only-min-256-bits"
+  secret: ZGV2LXN1cGVyLXNlY3JldC1qd3Qta2V5LWZvci1sb2NhbC1kZXZlbG9wbWVudC1vbmx5LW1pbi0yNTYtYml0cw==
+  access-token-expiration: 900000  # 15 minutes
+  refresh-token-expiration: 604800000  # 7 days
+
+# Development Logging
+logging:
+  level:
+    root: INFO
+    com.contentaggregation: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web: DEBUG
+
+# Swagger enabled for development
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Actuator Configuration for Development
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: auth-service-test
+
+  # Virtual threads disabled for tests
+  threads:
+    virtual:
+      enabled: false
+
+  # JPA Test Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Flyway disabled for tests (using ddl-auto)
+  flyway:
+    enabled: false
+
+  # Test Redis Configuration
+  data:
+    redis:
+      host: ${spring.redis.host:localhost}
+      port: ${spring.redis.port:6379}
+
+# JWT Test Configuration
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci11bml0LXRlc3RzLW9ubHktbWluLTI1Ni1iaXRzLXJlcXVpcmVk
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+  issuer: auth-service-test
+
+# Application Test Configuration
+app:
+  frontend-url: http://localhost:3000
+
+# OAuth2 Test Configuration
+spring.security.oauth2.client:
+  registration:
+    vk:
+      client-id: test-client-id
+      client-secret: test-client-secret
+      redirect-uri: http://localhost:8080/api/v1/auth/oauth2/vk/callback
+      authorization-grant-type: authorization_code
+      scope: email
+  provider:
+    vk:
+      authorization-uri: https://oauth.vk.com/authorize
+      token-uri: https://oauth.vk.com/access_token
+      user-info-uri: https://api.vk.com/method/users.get
+
+# Logging for tests
+logging:
+  level:
+    root: WARN
+    com.contentaggregation: DEBUG
+    org.springframework.security: WARN
+    org.hibernate.SQL: DEBUG
+
+# Actuator for tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

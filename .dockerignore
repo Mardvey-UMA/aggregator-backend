@@ -1,0 +1,63 @@
+# Build outputs
+**/build/
+**/target/
+**/out/
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Test results
+test-output/
+**/jacoco.exec
+**/surefire-reports/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kubernetes manifests (not needed in container)
+k8s/
+
+# Docker files (not needed in container)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Claude context
+.claude/
