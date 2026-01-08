@@ -102,15 +102,15 @@ public class UserProfile {
     private Float explorationVsExploitation = 0.5f;
 
     @Builder.Default
-    @Column(columnDefinition = "text[]")
+    @Column(name = "liked_posts_last_30d", columnDefinition = "text[]")
     private String[] likedPostsLast30d = new String[0];
 
     @Builder.Default
-    @Column(columnDefinition = "text[]")
+    @Column(name = "disliked_posts_last_30d", columnDefinition = "text[]")
     private String[] dislikedPostsLast30d = new String[0];
 
     @Builder.Default
-    @Column(columnDefinition = "text[]")
+    @Column(name = "viewed_posts_last_7d", columnDefinition = "text[]")
     private String[] viewedPostsLast7d = new String[0];
 
     @CreatedDate

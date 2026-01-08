@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_onboarding_user_id ON onboarding_status(user_id);
 CREATE INDEX IF NOT EXISTS idx_onboarding_completed ON onboarding_status(completed);
 CREATE INDEX IF NOT EXISTS idx_onboarding_step ON onboarding_status(step);
 
-CREATE TRIGGER IF NOT EXISTS update_onboarding_status_updated_at
+CREATE TRIGGER tr_onboarding_status_updated_at
     BEFORE UPDATE ON onboarding_status
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

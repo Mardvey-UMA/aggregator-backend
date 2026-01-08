@@ -118,6 +118,7 @@ docker-compose up content-service
 | `REDIS_HOST` | Redis host | localhost |
 | `REDIS_PORT` | Redis port | 6379 |
 | `AUTH_SERVICE_URL` | Auth service URL | http://localhost:8080 |
+| `AUTH_TOKEN_CACHE_TTL_SECONDS` | Auth token cache TTL | 60 |
 
 ### Application Properties
 
@@ -192,11 +193,12 @@ Custom metrics:
 
 Caches with TTLs:
 - `feed`: 5 minutes
-- `coldStartFeed`: 10 minutes
+- `coldStartFeed`: 5 minutes
 - `trending`: 15 minutes
 - `content`: 60 minutes
 - `similarContent`: 30 minutes
 - `userPreferences`: 30 minutes
+- `authTokens`: 60 seconds (configurable via `AUTH_TOKEN_CACHE_TTL_SECONDS`)
 
 ## Logging
 

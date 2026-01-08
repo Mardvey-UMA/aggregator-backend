@@ -27,7 +27,7 @@ dependencies {
 
     // Database & migrations
     runtimeOnly("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-core:10.10.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.10.0")
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
 

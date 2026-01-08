@@ -3,7 +3,7 @@ package com.contentaggregation.auth.onboarding.entity;
 import com.contentaggregation.auth.entity.User;
 import com.contentaggregation.auth.onboarding.converter.OnboardingStepConverter;
 import com.contentaggregation.auth.onboarding.enums.OnboardingStep;
-import io.hypersistence.utils.hibernate.type.array.ListArrayType;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -75,13 +75,13 @@ public class OnboardingStatus {
     @Builder.Default
     private Boolean skipped = false;
 
-    @Type(ListArrayType.class)
-    @Column(name = "selected_categories", columnDefinition = "text[]")
+    @Type(JsonType.class)
+    @Column(name = "selected_categories", columnDefinition = "jsonb")
     @Builder.Default
     private List<String> selectedCategories = new ArrayList<>();
 
-    @Type(ListArrayType.class)
-    @Column(name = "selected_content_types", columnDefinition = "text[]")
+    @Type(JsonType.class)
+    @Column(name = "selected_content_types", columnDefinition = "jsonb")
     @Builder.Default
     private List<String> selectedContentTypes = new ArrayList<>();
 

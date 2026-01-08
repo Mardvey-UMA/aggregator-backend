@@ -6,6 +6,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -37,6 +38,9 @@ public class AuthServiceClient {
      */
     @CircuitBreaker(name = "authService", fallbackMethod = "validateTokenFallback")
     @Retry(name = "authService")
+    // NOTE: Caching disabled to avoid Redis serialization complexity
+    // Auth service is fast enough and tokens are validated once per request
+    // @Cacheable(value = "authTokens", key = "#token", unless = "#result == null")
     public UserDto validateToken(String token) {
         log.debug("Validating token with auth service");
 

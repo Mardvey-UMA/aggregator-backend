@@ -410,7 +410,7 @@ This hybrid model lets you choose the right execution environment for each compo
 INSERT INTO content_metadata (content_post_id, categories, entities, keywords, sentiment, sentiment_score, language, reading_time_minutes, complexity_score)
 SELECT
     id,
-    CASE
+    (CASE
         WHEN source_channel_name LIKE '%Tech%' OR source_channel_name LIKE '%Programming%' OR source_channel_name LIKE '%DevOps%' OR source_channel_name LIKE '%Web%' THEN '{"technology": 0.9, "programming": 0.7}'
         WHEN source_channel_name LIKE '%Science%' OR source_channel_name LIKE '%Physics%' OR source_channel_name LIKE '%Biology%' THEN '{"science": 0.9, "education": 0.5}'
         WHEN source_channel_name LIKE '%Business%' OR source_channel_name LIKE '%Startup%' OR source_channel_name LIKE '%Crypto%' THEN '{"business": 0.9, "finance": 0.6}'
@@ -420,22 +420,22 @@ SELECT
         WHEN source_channel_name LIKE '%Learn%' OR source_channel_name LIKE '%Book%' OR source_channel_name LIKE '%Data%' THEN '{"education": 0.9, "technology": 0.6}'
         WHEN source_channel_name LIKE '%News%' OR source_channel_name LIKE '%Reuters%' OR source_channel_name LIKE '%BBC%' THEN '{"news": 0.9, "world": 0.7}'
         ELSE '{"general": 0.8, "mixed": 0.5}'
-    END,
-    CASE
+    END)::jsonb,
+    (CASE
         WHEN content LIKE '%AI%' OR content LIKE '%OpenAI%' THEN '{"company": ["OpenAI", "Anthropic"], "technology": ["AI", "ML"]}'
         WHEN content LIKE '%Apple%' OR content LIKE '%iPhone%' THEN '{"company": ["Apple"], "product": ["iPhone", "Vision Pro"]}'
         WHEN content LIKE '%Google%' OR content LIKE '%Microsoft%' THEN '{"company": ["Google", "Microsoft"]}'
         WHEN content LIKE '%NASA%' OR content LIKE '%SpaceX%' THEN '{"organization": ["NASA", "SpaceX"], "person": ["Elon Musk"]}'
         ELSE '{"entities": []}'
-    END,
-    CASE
+    END)::jsonb,
+    (CASE
         WHEN content_type = 'SHORT_POST' THEN '["news", "update", "brief"]'
         WHEN content_type = 'MEDIUM_POST' THEN '["analysis", "overview", "guide"]'
         WHEN content_type = 'LONG_ARTICLE' THEN '["tutorial", "deep-dive", "comprehensive"]'
         WHEN content_type = 'VIDEO_POST' THEN '["video", "visual", "multimedia"]'
         WHEN content_type = 'IMAGE_POST' THEN '["image", "gallery", "visual"]'
         ELSE '["content", "post"]'
-    END,
+    END)::jsonb,
     CASE
         WHEN content LIKE '%breakthrough%' OR content LIKE '%success%' OR content LIKE '%win%' OR content LIKE '%record%' OR content LIKE '%best%' THEN 'POSITIVE'
         WHEN content LIKE '%fail%' OR content LIKE '%loss%' OR content LIKE '%crisis%' OR content LIKE '%vulnerability%' THEN 'NEGATIVE'

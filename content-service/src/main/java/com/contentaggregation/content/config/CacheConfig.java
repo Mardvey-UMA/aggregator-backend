@@ -44,15 +44,20 @@ public class CacheConfig {
     @Value("${app.cache.user-preferences-ttl-minutes:30}")
     private long userPreferencesTtlMinutes;
 
+    @Value("${app.cache.auth-token-ttl-seconds:60}")
+    private long authTokenTtlSeconds;
+
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    public CacheManager cacheManager(
+            RedisConnectionFactory connectionFactory,
+            GenericJackson2JsonRedisSerializer redisJsonSerializer) {
         // Default cache configuration
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(contentTtlMinutes))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                        .fromSerializer(redisJsonSerializer))
                 .disableCachingNullValues();
 
         // Cache-specific configurations
@@ -86,6 +91,11 @@ public class CacheConfig {
         // Similar content cache (30 minutes)
         cacheConfigurations.put("similarContent", defaultConfig
                 .entryTtl(Duration.ofMinutes(30))
+                .prefixCacheNameWith("content-service:"));
+
+        // Auth token cache (seconds)
+        cacheConfigurations.put("authTokens", defaultConfig
+                .entryTtl(Duration.ofSeconds(authTokenTtlSeconds))
                 .prefixCacheNameWith("content-service:"));
 
         return RedisCacheManager.builder(connectionFactory)

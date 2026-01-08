@@ -64,12 +64,20 @@ public interface ContentPostRepository extends JpaRepository<ContentPost, UUID> 
      * @param pageable pagination information
      * @return page of content posts with the category
      */
-    @Query("""
-            SELECT cp FROM ContentPost cp
-            JOIN cp.metadata m
-            WHERE m.categories LIKE CONCAT('%"', :category, '"%')
-            ORDER BY cp.publishedAt DESC
-            """)
+    @Query(value = """
+            SELECT cp.*
+            FROM content_posts cp
+            JOIN content_metadata m ON m.content_post_id = cp.id
+            WHERE m.categories::text ILIKE CONCAT('%"', :category, '"%')
+            ORDER BY cp.published_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM content_posts cp
+            JOIN content_metadata m ON m.content_post_id = cp.id
+            WHERE m.categories::text ILIKE CONCAT('%"', :category, '"%')
+            """,
+            nativeQuery = true)
     Page<ContentPost> findByCategory(@Param("category") String category, Pageable pageable);
 
     /**

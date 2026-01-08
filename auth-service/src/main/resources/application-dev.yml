@@ -3,10 +3,11 @@ server:
 
 spring:
   # Database Configuration (Development)
+  # Note: Uses environment variables from docker-compose or falls back to localhost for local dev
   datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:authdb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -19,13 +20,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
-
+        default_schema: public
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+        type:
+          preferred_array_jdbc_type_code: 2003
   # Redis Development
+  # Note: Uses environment variables from docker-compose or falls back to localhost for local dev
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: ""
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
   # Development OAuth2
   security:
@@ -39,8 +48,8 @@ spring:
 jwt:
   # Base64 encoded: "dev-super-secret-jwt-key-for-local-development-only-min-256-bits"
   secret: ZGV2LXN1cGVyLXNlY3JldC1qd3Qta2V5LWZvci1sb2NhbC1kZXZlbG9wbWVudC1vbmx5LW1pbi0yNTYtYml0cw==
-  access-token-expiration: 900000  # 15 minutes
-  refresh-token-expiration: 604800000  # 7 days
+  access-token-expiration: 900000 # 15 minutes
+  refresh-token-expiration: 604800000 # 7 days
 
 # Development Logging
 logging:
@@ -64,7 +73,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: '*'
   endpoint:
     health:
       show-details: always

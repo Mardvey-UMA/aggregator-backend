@@ -4,7 +4,10 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+.claude
+CLAUDE.md
+.mcp.json
+.env
 # Maven
 target/
 pom.xml.tag

@@ -22,7 +22,7 @@ dependencies {
 
     // Database
     runtimeOnly("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-core:10.10.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.10.0")
 
     // Hibernate Types for PostgreSQL JSONB support

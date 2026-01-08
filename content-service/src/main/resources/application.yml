@@ -122,6 +122,7 @@ app:
     feed-ttl-minutes: ${FEED_CACHE_TTL_MINUTES:5}
     trending-ttl-minutes: ${TRENDING_CACHE_TTL_MINUTES:15}
     user-preferences-ttl-minutes: 30
+    auth-token-ttl-seconds: ${AUTH_TOKEN_CACHE_TTL_SECONDS:60}
 
 # Resilience4j Circuit Breaker Configuration
 resilience4j:

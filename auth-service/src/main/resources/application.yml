@@ -49,6 +49,8 @@ spring:
           batch_size: 25
         order_inserts: true
         order_updates: true
+        type:
+          preferred_array_jdbc_type_code: 2003
 
   # Flyway Migration Configuration
   flyway:

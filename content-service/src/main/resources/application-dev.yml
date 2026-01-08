@@ -1,10 +1,10 @@
 # Development Profile Configuration
 spring:
-  # Database - Local PostgreSQL
+  # Database - Uses environment variables from docker-compose or falls back to localhost for local dev
   datasource:
-    url: jdbc:postgresql://localhost:5433/contentdb
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${CONTENT_DB_HOST:localhost}:${CONTENT_DB_PORT:5433}/${CONTENT_DB_NAME:contentdb}
+    username: ${CONTENT_DB_USERNAME:postgres}
+    password: ${CONTENT_DB_PASSWORD:postgres}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -16,11 +16,11 @@ spring:
       hibernate:
         format_sql: true
 
-  # Redis - Local
+  # Redis - Uses environment variables from docker-compose or falls back to localhost for local dev
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
   # DevTools
   devtools:
@@ -56,10 +56,11 @@ springdoc:
 # Application - Development settings
 app:
   auth-service:
-    url: http://localhost:8080
+    url: ${AUTH_SERVICE_URL:http://localhost:8080}
     timeout-ms: 10000
 
   cache:
     content-ttl-minutes: 5
     feed-ttl-minutes: 1
     trending-ttl-minutes: 5
+    auth-token-ttl-seconds: 30

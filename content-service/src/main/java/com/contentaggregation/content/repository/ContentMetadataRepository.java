@@ -36,11 +36,18 @@ public interface ContentMetadataRepository extends JpaRepository<ContentMetadata
      * @param pageable pagination information
      * @return page of metadata containing the keyword
      */
-    @Query("""
-            SELECT m FROM ContentMetadata m
-            WHERE m.keywords LIKE CONCAT('%"', :keyword, '"%')
-            ORDER BY m.createdAt DESC
-            """)
+    @Query(value = """
+            SELECT m.*
+            FROM content_metadata m
+            WHERE m.keywords::text ILIKE CONCAT('%', :keyword, '%')
+            ORDER BY m.created_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM content_metadata m
+            WHERE m.keywords::text ILIKE CONCAT('%', :keyword, '%')
+            """,
+            nativeQuery = true)
     Page<ContentMetadata> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     /**
